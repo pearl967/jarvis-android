@@ -75,6 +75,7 @@ public class MainActivity extends Activity implements JarvisService.JarvisCallba
         list.add(Manifest.permission.READ_PHONE_STATE);
         list.add(Manifest.permission.READ_CALL_LOG);
         list.add(Manifest.permission.CAMERA);
+        list.add(Manifest.permission.ACCESS_COARSE_LOCATION);
         if (Build.VERSION.SDK_INT >= 26) {
             list.add("android.permission.ANSWER_PHONE_CALLS");
         }

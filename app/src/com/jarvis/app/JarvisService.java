@@ -16,6 +16,8 @@ import android.content.pm.ResolveInfo;
 import android.database.Cursor;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraManager;
+import android.location.Location;
+import android.location.LocationManager;
 import android.media.MediaPlayer;
 import android.media.session.MediaController;
 import android.media.session.MediaSessionManager;
@@ -748,6 +750,20 @@ public class JarvisService extends Service
             }
             return true;
         }
+        if (has(q, "напомни")) {
+            answerAndSpeak("Уточните, через сколько минут напомнить, сэр.");
+            return true;
+        }
+        if (has(q, "погод")) {
+            getWeather();
+            return true;
+        }
+        if (has(q, "что ты умеешь", "что можешь", "твои возможности")) {
+            answerAndSpeak("Я читаю и отправляю SMS, отвечаю на звонки, открываю приложения, "
+                    + "читаю уведомления, управляю музыкой и фонариком, ставлю напоминания "
+                    + "и показываю погоду, сэр.");
+            return true;
+        }
         if (has(q, "прочитай уведомлен", "какие уведомлен", "последние уведомлен")) {
             readNotifications();
             return true;
@@ -987,6 +1003,67 @@ public class JarvisService extends Service
         } catch (Exception e) {
             answerAndSpeak("Не смог установить напоминание, сэр.");
         }
+    }
+
+    private void getWeather() {
+        status("Узнаю погоду...");
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                HttpURLConnection connection = null;
+                try {
+                    String base = endpoint;
+                    int idx = base.indexOf("/v1/");
+                    if (idx > 0) base = base.substring(0, idx);
+                    String url = base + "/weather";
+                    if (hasPermission(Manifest.permission.ACCESS_COARSE_LOCATION)) {
+                        LocationManager lm = (LocationManager)
+                                getSystemService(Context.LOCATION_SERVICE);
+                        Location loc = null;
+                        try {
+                            loc = lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+                        } catch (Exception ignored) {
+                        }
+                        if (loc == null) {
+                            try {
+                                loc = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+                            } catch (Exception ignored) {
+                            }
+                        }
+                        if (loc != null) {
+                            url += "?lat=" + loc.getLatitude() + "&lon=" + loc.getLongitude();
+                        }
+                    }
+                    connection = (HttpURLConnection) new URL(url).openConnection();
+                    connection.setRequestMethod("GET");
+                    connection.setConnectTimeout(5000);
+                    connection.setReadTimeout(12000);
+                    BufferedReader reader = new BufferedReader(
+                            new InputStreamReader(connection.getInputStream(), "UTF-8"));
+                    StringBuilder response = new StringBuilder();
+                    String line;
+                    while ((line = reader.readLine()) != null) response.append(line);
+                    reader.close();
+                    JSONObject obj = new JSONObject(response.toString());
+                    final String text = obj.getString("text");
+                    main.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            answerAndSpeak(text);
+                        }
+                    });
+                } catch (Exception e) {
+                    main.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            answerAndSpeak("Не смог узнать погоду, сэр.");
+                        }
+                    });
+                } finally {
+                    if (connection != null) connection.disconnect();
+                }
+            }
+        }).start();
     }
 
     private void openWifiSettings() {

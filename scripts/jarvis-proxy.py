@@ -18,6 +18,16 @@ UPSTREAM = "http://127.0.0.1:8081"
 TTS_URL = "https://tts.api.cloud.yandex.net/tts/v3/utteranceSynthesis"
 PORT = 8001
 
+WEATHER_CODES = {
+    0: "ясно", 1: "преимущественно ясно", 2: "переменная облачность",
+    3: "облачно", 45: "туман", 48: "гололёд", 51: "морось",
+    53: "морось", 55: "сильная морось", 61: "небольшой дождь",
+    63: "дождь", 65: "сильный дождь", 71: "небольшой снег",
+    73: "снег", 75: "сильный снег", 80: "небольшой ливень",
+    81: "ливень", 82: "сильный ливень", 95: "гроза",
+    96: "гроза с градом", 99: "сильная гроза с градом",
+}
+
 
 def _send(self, code, data, ctype="application/json"):
     self.send_response(code)
@@ -84,6 +94,45 @@ class Handler(http.server.BaseHTTPRequestHandler):
         except Exception as exc:
             _send(self, 502, ('{"error":"%s"}' % str(exc)).encode())
 
+    def _weather(self):
+        query = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+        lat = query.get("lat", [""])[0]
+        lon = query.get("lon", [""])[0]
+        try:
+            if not lat or not lon:
+                req = urllib.request.Request(
+                    "https://ipapi.co/json/",
+                    headers={"User-Agent": "JARVIS/2.1"},
+                )
+                with urllib.request.urlopen(req, timeout=8) as resp:
+                    place = json.load(resp)
+                lat = str(place["latitude"])
+                lon = str(place["longitude"])
+            url = (
+                "https://api.open-meteo.com/v1/forecast"
+                "?latitude=%s&longitude=%s"
+                "&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m"
+                "&timezone=auto" % (urllib.parse.quote(lat), urllib.parse.quote(lon))
+            )
+            req = urllib.request.Request(url, headers={"User-Agent": "JARVIS/2.1"})
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                data = json.load(resp)
+            cur = data["current"]
+            code = int(cur.get("weather_code", 0))
+            desc = WEATHER_CODES.get(code, "переменная облачность")
+            text = (
+                "Сейчас %.1f градуса, %s, ветер %.1f метров в секунду, "
+                "влажность %d процентов." % (
+                    cur.get("temperature_2m", 0),
+                    desc,
+                    cur.get("wind_speed_10m", 0),
+                    int(cur.get("relative_humidity_2m", 0)),
+                )
+            )
+            _send(self, 200, json.dumps({"text": text, "lat": lat, "lon": lon}).encode())
+        except Exception as exc:
+            _send(self, 502, ('{"error":"%s"}' % str(exc)).encode())
+
     def _forward(self):
         length = int(self.headers.get("Content-Length", "0") or 0)
         body = self.rfile.read(length) if length else None
@@ -120,6 +169,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
             _send(self, 200, b'{"status":"ok"}')
         elif self.path.startswith("/tts?"):
             self._tts()
+        elif self.path.startswith("/weather"):
+            self._weather()
         else:
             self._forward()
 
