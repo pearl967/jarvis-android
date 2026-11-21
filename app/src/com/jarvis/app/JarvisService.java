@@ -92,6 +92,8 @@ public class JarvisService extends Service
     private boolean continuous = false;
     private boolean listening = false;
     private boolean autoListen = true;
+    private volatile int answerGeneration = 0;
+    private volatile int speechGeneration = 0;
     private JarvisCallback callback;
     private PowerManager.WakeLock wakeLock;
 
@@ -295,7 +297,7 @@ public class JarvisService extends Service
     public void speak(String text) {
         if (text == null || text.length() == 0) return;
         if ("yandex".equals(ttsProvider) && yandexKey.length() > 0) {
-            speakYandex(text);
+            speakYandex(text, speechGeneration);
             return;
         }
         if (ttsReady && tts != null) {
@@ -306,7 +308,7 @@ public class JarvisService extends Service
         }
     }
 
-    private void speakYandex(final String text) {
+    private void speakYandex(final String text, final int generation) {
         stopMedia();
         new Thread(new Runnable() {
             @Override
@@ -323,6 +325,15 @@ public class JarvisService extends Service
                     mp.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
                         @Override
                         public void onPrepared(MediaPlayer player) {
+                            if (generation != speechGeneration) {
+                                try {
+                                    player.stop();
+                                    player.release();
+                                } catch (Exception ignored) {
+                                }
+                                if (mediaPlayer == player) mediaPlayer = null;
+                                return;
+                            }
                             player.start();
                             status("Говорю (Yandex)...");
                         }
@@ -330,12 +341,13 @@ public class JarvisService extends Service
                     mp.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
                         @Override
                         public void onCompletion(MediaPlayer player) {
-                            restartAfter(700);
+                            if (generation == speechGeneration) restartAfter(700);
                         }
                     });
                     mp.setOnErrorListener(new MediaPlayer.OnErrorListener() {
                         @Override
                         public boolean onError(MediaPlayer player, int what, int extra) {
+                            if (generation != speechGeneration) return true;
                             status("Yandex недоступен — системный голос");
                             if (ttsReady && tts != null) {
                                 tts.speak(text, TextToSpeech.QUEUE_FLUSH, null,
@@ -347,6 +359,7 @@ public class JarvisService extends Service
                     mediaPlayer = mp;
                     mp.prepareAsync();
                 } catch (Exception e) {
+                    if (generation != speechGeneration) return;
                     status("Ошибка Yandex TTS: " + e.getMessage());
                     if (ttsReady && tts != null) {
                         tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "jarvis_fallback");
@@ -368,7 +381,8 @@ public class JarvisService extends Service
     }
 
     /** Speaks a streamed sentence, adding the "сэр" address only to the first chunk. */
-    private void speakChunk(String text, boolean[] spoken) {
+    private void speakChunk(String text, boolean[] spoken, int generation) {
+        if (generation != answerGeneration) return;
         if (text == null || text.trim().length() == 0) return;
         String t = text.trim();
         if (!spoken[0] && !t.toLowerCase(new Locale("ru")).contains("сэр")) {
@@ -437,6 +451,8 @@ public class JarvisService extends Service
 
     public void stopListening() {
         autoListen = false;
+        answerGeneration++;
+        speechGeneration++;
         if (tts != null) {
             try { tts.stop(); } catch (Exception ignored) { }
         }
@@ -463,16 +479,18 @@ public class JarvisService extends Service
     public void ask(final String question) {
         if (question == null || question.trim().length() == 0) return;
         if (handleLocalCommand(question)) return;
+        final int myGeneration = ++answerGeneration;
         final long startedAt = System.currentTimeMillis();
         status("Обрабатываю...");
         new Thread(new Runnable() {
             @Override
             public void run() {
-                final String answer = callApi(question);
+                final String answer = callApi(question, myGeneration);
                 final double seconds = (System.currentTimeMillis() - startedAt) / 1000.0;
                 main.post(new Runnable() {
                     @Override
                     public void run() {
+                        if (myGeneration != answerGeneration) return;
                         status(String.format(Locale.US, "Ответ за %.1f с", seconds));
                         onAnswer(answer);
                         restartAfter(900);
@@ -482,7 +500,7 @@ public class JarvisService extends Service
         }).start();
     }
 
-    private String callApi(String question) {
+    private String callApi(String question, final int generation) {
         HttpURLConnection connection = null;
         final StringBuilder answer = new StringBuilder();
         final StringBuilder pending = new StringBuilder();
@@ -524,6 +542,7 @@ public class JarvisService extends Service
             BufferedReader reader = new BufferedReader(new InputStreamReader(is, "UTF-8"));
             String line;
             while ((line = reader.readLine()) != null) {
+                if (generation != answerGeneration) break;
                 if (!line.startsWith("data:")) continue;
                 String payload = line.substring(5).trim();
                 if ("[DONE]".equals(payload)) break;
@@ -541,6 +560,7 @@ public class JarvisService extends Service
                         main.post(new Runnable() {
                             @Override
                             public void run() {
+                                if (generation != answerGeneration) return;
                                 onStream(snapshot);
                             }
                         });
@@ -552,7 +572,8 @@ public class JarvisService extends Service
                             main.post(new Runnable() {
                                 @Override
                                 public void run() {
-                                    speakChunk(sentence, spoken);
+                                    if (generation != answerGeneration) return;
+                                    speakChunk(sentence, spoken, generation);
                                 }
                             });
                         }
@@ -573,7 +594,8 @@ public class JarvisService extends Service
                 main.post(new Runnable() {
                     @Override
                     public void run() {
-                        speakChunk(finalChunk, spoken);
+                        if (generation != answerGeneration) return;
+                        speakChunk(finalChunk, spoken, generation);
                     }
                 });
             } else if (!spoken[0]) {
@@ -581,7 +603,8 @@ public class JarvisService extends Service
                 main.post(new Runnable() {
                     @Override
                     public void run() {
-                        speakChunk(full, spoken);
+                        if (generation != answerGeneration) return;
+                        speakChunk(full, spoken, generation);
                     }
                 });
             }
