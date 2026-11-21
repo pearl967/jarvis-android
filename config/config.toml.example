@@ -1,0 +1,33 @@
+# OpenJarvis configuration
+# Hardware: aarch64 (8 cores, 7.5 GB RAM)
+# Full reference config: jarvis init --full
+
+[engine]
+default = "llamacpp"
+
+[engine.llamacpp]
+host = "http://127.0.0.1:8081"
+
+[intelligence]
+default_model = "qwen2.5:0.5b"
+max_tokens = 96
+temperature = 0.25
+
+[agent]
+# Пустой агент = прямой вызов модели без тяжёлого системного промпта.
+# Для инструментов: jarvis ask -a orchestrator '...'
+default_agent = ""
+context_from_memory = false
+
+[tools]
+enabled = ["code_interpreter", "web_search", "file_read", "shell_exec", "calculator", "file_write", "apply_patch"]
+
+[security]
+profile = "personal"
+
+[analytics]
+enabled = false
+choice_recorded = true
+
+[server.auth]
+api_key = ""

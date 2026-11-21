@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JARVIS — локальный помощник</title>
+<style>
+  body { margin:0; background:#04070b; color:#9fe9ff; font-family:"Courier New",monospace; }
+  .wrap { max-width:760px; margin:auto; padding:28px 18px 60px; }
+  h1 { color:#ffd88a; letter-spacing:6px; text-align:center; text-shadow:0 0 18px rgba(255,200,100,.5); }
+  .sub { text-align:center; color:#5e9fb0; font-size:12px; letter-spacing:2px; margin-bottom:28px; }
+  a.btn { display:block; text-align:center; padding:15px; margin:14px 0; border:1px solid #ffd88a;
+          color:#ffd88a; text-decoration:none; letter-spacing:2px; background:rgba(255,208,120,.07); }
+  a.btn:active { background:rgba(255,208,120,.2); }
+  pre { white-space:pre-wrap; background:#081620; border:1px solid rgba(120,225,255,.2);
+        padding:12px; font-size:12px; color:#d8f7ff; }
+  h2 { color:#ffd88a; font-size:15px; letter-spacing:2px; margin-top:28px; }
+  li { margin:8px 0; }
+  .small { color:#5e9fb0; font-size:11px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>J.A.R.V.I.S.</h1>
+  <div class="sub">LOCAL VOICE SYSTEM // v1.2</div>
+
+  <a class="btn" href="apk/Jarvis.apk">СКАЧАТЬ APK ДЛЯ ANDROID</a>
+  <a class="btn" href="README.md">ИНСТРУКЦИЯ / README</a>
+
+  <h2>Что это</h2>
+  <p>Нативный Android-помощник, который разговаривает с локальным OpenJarvis.
+  Wake-слово «Джарвис», голосовые ответы, HUD, непрерывный режим, потоковый вывод.
+  Без Telegram, без рута, без облачных ключей.</p>
+
+  <h2>Установка</h2>
+  <ol>
+    <li>Если старая версия уже стоит — удалите её перед установкой.</li>
+    <li>Разрешите установку из неизвестных источников.</li>
+    <li>Дайте приложению доступ к микрофону.</li>
+    <li>В <b>НАСТРОЙКИ ЯДРА</b> введите <code>http://&lt;IP-контейнера&gt;:8001/v1/chat/completions</code>.</li>
+    <li>Нажмите <b>ПРОВЕРКА СВЯЗИ</b> и скажите «Джарвис, привет».</li>
+  </ol>
+
+  <h2>Сервер</h2>
+  <pre>ollama pull qwen2.5:0.5b
+bash scripts/start-openjarvis.sh</pre>
+
+  <h2>Скорость</h2>
+  <p>Модель 0.5B на CPU aarch64: ~17 ток/с, типичный ответ 0.9–1.5 с.
+  Старая модель 2.7B выдавала 0.5 ток/с и отвечала более двух минут.</p>
+
+  <p class="small">Репозиторий подготовлен для GitHub Pages: откройте Settings → Pages → Deploy from branch main / root.</p>
+</div>
+</body>
+</html>
