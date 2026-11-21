@@ -32,7 +32,7 @@ rm -rf "$REPO"
 # 5. Удалить конфиг и данные OpenJarvis
 rm -rf /root/.openjarvis
 
-# 6. Удалить модели Ollama (примерно 2.7 ГБ)
+# 6. Удалить модели Ollama (быстрая 0.5B и старая 2.7B)
 rm -rf /root/.ollama
 
 # 7. Удалить Ollama (бинарники, библиотеки, systemd-сервис, пользователя)
@@ -52,6 +52,7 @@ npm install -g npm@10.9.8 2>/dev/null || true
 
 # 10. Удалить Android-приложение, мост и инструменты сборки
 rm -rf "$HERE/JarvisAndroid"
+rm -rf "$HERE/JarvisGitHub"
 rm -f "$HERE/jarvis-proxy.py"
 
 # 11. Удалить системные пакеты, установленные при установке (опционально)

@@ -38,7 +38,7 @@ fi
 if ! curl -s --max-time 2 http://127.0.0.1:8000/docs >/dev/null 2>&1; then
     echo "Запускаю API-сервер..."
     cd "$REPO" || exit 1
-    nohup uv run --extra server jarvis serve --host 127.0.0.1 --port 8000 -e llamacpp \
+    nohup uv run --extra server jarvis serve --host 127.0.0.1 --port 8000 -e llamacpp -a simple \
         > /tmp/opencode/jarvis-api.log 2>&1 &
     wait_for http://127.0.0.1:8000/docs "API" 30
 else
