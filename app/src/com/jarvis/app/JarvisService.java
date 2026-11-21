@@ -421,6 +421,15 @@ public class JarvisService extends Service
         this.callback = cb;
     }
 
+    public void resume() {
+        autoListen = true;
+        if (pendingRestart != null) {
+            main.removeCallbacks(pendingRestart);
+            pendingRestart = null;
+        }
+        if (!listening) listen();
+    }
+
     public void setContinuous(boolean on) {
         continuous = on;
         status(on ? "Непрерывный режим включён" : "Режим по фразе «Джарвис»");

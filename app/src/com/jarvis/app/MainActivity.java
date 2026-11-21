@@ -108,10 +108,14 @@ public class MainActivity extends Activity implements JarvisService.JarvisCallba
     public void onRequestPermissionsResult(int requestCode, String[] permissions,
                                            int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == PERMISSION_REQUEST && hasMicPermission()
-                && service != null && !autoStarted) {
-            service.listen();
-            autoStarted = true;
+        if (requestCode == PERMISSION_REQUEST && service != null) {
+            if (hasMicPermission()) {
+                service.resume();
+                autoStarted = true;
+                callJs("status", "Разрешения получены — слушаю");
+            } else {
+                callJs("status", "Микрофон не разрешён — нажмите «РАЗРЕШЕНИЯ»");
+            }
         }
     }
 
@@ -173,6 +177,11 @@ public class MainActivity extends Activity implements JarvisService.JarvisCallba
     }
 
     public class Bridge {
+        @JavascriptInterface
+        public void requestPermissions() {
+            requestAllPermissions();
+        }
+
         @JavascriptInterface
         public void listen() {
             if (service != null) service.listen();
