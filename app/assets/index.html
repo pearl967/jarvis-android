@@ -114,6 +114,10 @@
     <button onclick="quick('Прочитай смс')">SMS</button>
     <button onclick="quick('Который час')">ВРЕМЯ</button>
     <button onclick="quick('Проверь батарею')">БАТАРЕЯ</button>
+    <button onclick="quick('Прочитай уведомления')">УВЕДОМЛЕНИЯ</button>
+    <button onclick="quick('Включи фонарик')">ФОНАРИК</button>
+    <button onclick="quick('Напомни через 1 минуту проверить JARVIS')">НАПОМИНАНИЕ</button>
+    <button onclick="quick('Следующий трек')">МУЗЫКА</button>
     <button onclick="quick('Открой камеру')">КАМЕРА</button>
     <button onclick="quick('Стоп')">СТОП</button>
   </div>
@@ -145,8 +149,9 @@
       <select id="voice" onchange="saveVoice()"></select>
       <input id="yandexKey" placeholder="Yandex API key (необязательно)">
       <button onclick="saveKey()">СОХРАНИТЬ КЛЮЧ</button>
+      <button onclick="JarvisBridge.notificationAccess()">ДОСТУП К УВЕДОМЛЕНИЯМ</button>
     </div>
-    <div class="hint">Голос: выберите движок и голос, установленные на телефоне (Google, Yandex TTS и др.). Для облачного Yandex введите API-ключ. Команды: «прочитай смс», «ответь ...», «открой камеру», «ответь на звонок», «отбей звонок», «стоп».</div>
+    <div class="hint">Голос: выберите движок и голос, установленные на телефоне (Google, Yandex TTS и др.). Для облачного Yandex введите API-ключ. Доступ к уведомлениям нужен для чтения уведомлений и управления музыкой. Команды: «прочитай смс», «ответь ...», «открой камеру», «ответь на звонок», «отбей звонок», «напомни через 5 минут ...», «включи фонарик», «стоп».</div>
   </details>
 </div>
 

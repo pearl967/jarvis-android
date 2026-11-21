@@ -74,8 +74,12 @@ public class MainActivity extends Activity implements JarvisService.JarvisCallba
         list.add(Manifest.permission.CALL_PHONE);
         list.add(Manifest.permission.READ_PHONE_STATE);
         list.add(Manifest.permission.READ_CALL_LOG);
+        list.add(Manifest.permission.CAMERA);
         if (Build.VERSION.SDK_INT >= 26) {
             list.add("android.permission.ANSWER_PHONE_CALLS");
+        }
+        if (Build.VERSION.SDK_INT >= 33) {
+            list.add("android.permission.POST_NOTIFICATIONS");
         }
         return list.toArray(new String[0]);
     }
@@ -246,6 +250,11 @@ public class MainActivity extends Activity implements JarvisService.JarvisCallba
         @JavascriptInterface
         public String getYandexKey() {
             return service != null ? service.getYandexKey() : "";
+        }
+
+        @JavascriptInterface
+        public void notificationAccess() {
+            if (service != null) service.openNotificationSettings();
         }
 
         @JavascriptInterface

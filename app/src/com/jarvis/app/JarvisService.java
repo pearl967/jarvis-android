@@ -1,9 +1,12 @@
 package com.jarvis.app;
 
 import android.Manifest;
+import android.app.AlarmManager;
 import android.app.Notification;
 import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.Service;
+import android.content.ComponentName;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
@@ -11,7 +14,11 @@ import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.database.Cursor;
+import android.hardware.camera2.CameraCharacteristics;
+import android.hardware.camera2.CameraManager;
 import android.media.MediaPlayer;
+import android.media.session.MediaController;
+import android.media.session.MediaSessionManager;
 import android.net.Uri;
 import android.os.BatteryManager;
 import android.os.Binder;
@@ -21,6 +28,8 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.PowerManager;
+import android.os.SystemClock;
+import android.provider.Settings;
 import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
@@ -358,6 +367,17 @@ public class JarvisService extends Service
         }
     }
 
+    /** Speaks a streamed sentence, adding the "сэр" address only to the first chunk. */
+    private void speakChunk(String text, boolean[] spoken) {
+        if (text == null || text.trim().length() == 0) return;
+        String t = text.trim();
+        if (!spoken[0] && !t.toLowerCase(new Locale("ru")).contains("сэр")) {
+            t = "Сэр, " + t;
+        }
+        spoken[0] = true;
+        speak(t);
+    }
+
     // ---------- Service control ----------
 
     @Override
@@ -455,7 +475,6 @@ public class JarvisService extends Service
                     public void run() {
                         status(String.format(Locale.US, "Ответ за %.1f с", seconds));
                         onAnswer(answer);
-                        speak(answer);
                         restartAfter(900);
                     }
                 });
@@ -466,6 +485,8 @@ public class JarvisService extends Service
     private String callApi(String question) {
         HttpURLConnection connection = null;
         final StringBuilder answer = new StringBuilder();
+        final StringBuilder pending = new StringBuilder();
+        final boolean[] spoken = {false};
         try {
             JSONObject system = new JSONObject();
             system.put("role", "system");
@@ -515,6 +536,7 @@ public class JarvisService extends Service
                     String piece = delta.optString("content", "");
                     if (piece.length() > 0) {
                         answer.append(piece);
+                        pending.append(piece);
                         final String snapshot = answer.toString();
                         main.post(new Runnable() {
                             @Override
@@ -522,6 +544,18 @@ public class JarvisService extends Service
                                 onStream(snapshot);
                             }
                         });
+                        String ready = pending.toString().trim();
+                        if (ready.length() > 12 && (ready.endsWith(".")
+                                || ready.endsWith("!") || ready.endsWith("?"))) {
+                            final String sentence = ready;
+                            pending.setLength(0);
+                            main.post(new Runnable() {
+                                @Override
+                                public void run() {
+                                    speakChunk(sentence, spoken);
+                                }
+                            });
+                        }
                     }
                 } catch (Exception ignored) {
                 }
@@ -532,6 +566,24 @@ public class JarvisService extends Service
             String text = answer.toString().trim();
             if (!text.toLowerCase(new Locale("ru")).contains("сэр")) {
                 text = "Сэр, " + text;
+            }
+            String rest = pending.toString().trim();
+            if (rest.length() > 0) {
+                final String finalChunk = rest;
+                main.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        speakChunk(finalChunk, spoken);
+                    }
+                });
+            } else if (!spoken[0]) {
+                final String full = text;
+                main.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        speakChunk(full, spoken);
+                    }
+                });
             }
             return text;
         } catch (Exception e) {
@@ -660,6 +712,47 @@ public class JarvisService extends Service
             launchApp(raw.substring(7).trim());
             return true;
         }
+
+        Matcher reminder = Pattern.compile(
+                "напомни через\\s+(\\d+)\\s+([а-яё]+)\\s+(.+)",
+                Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE).matcher(q);
+        if (reminder.find()) {
+            try {
+                scheduleReminder(Integer.parseInt(reminder.group(1)),
+                        reminder.group(2), reminder.group(3));
+            } catch (Exception ignored) {
+                answerAndSpeak("Не понял срок напоминания, сэр.");
+            }
+            return true;
+        }
+        if (has(q, "прочитай уведомлен", "какие уведомлен", "последние уведомлен")) {
+            readNotifications();
+            return true;
+        }
+        if (has(q, "фонарик")) {
+            toggleTorch(!has(q, "выключи", "погаси", "отключи"));
+            return true;
+        }
+        if (has(q, "поставь на паузу", "пауза", "останови музыку", "выключи музыку")) {
+            controlMedia("pause");
+            return true;
+        }
+        if (has(q, "продолжи музыку", "играй", "включи музыку")) {
+            controlMedia("play");
+            return true;
+        }
+        if (has(q, "следующий трек", "следующая песня", "переключи трек")) {
+            controlMedia("next");
+            return true;
+        }
+        if (has(q, "предыдущий трек", "предыдущая песня")) {
+            controlMedia("prev");
+            return true;
+        }
+        if (has(q, "настройки wi-fi", "вайфай", "wi-fi")) {
+            openWifiSettings();
+            return true;
+        }
         return false;
     }
 
@@ -765,6 +858,122 @@ public class JarvisService extends Service
             answerAndSpeak("Не нашёл приложение " + query + ", сэр.");
         } catch (Exception e) {
             answerAndSpeak("Не смог открыть приложение, сэр.");
+        }
+    }
+
+    private boolean hasNotificationAccess() {
+        try {
+            String enabled = Settings.Secure.getString(getContentResolver(),
+                    "enabled_notification_listeners");
+            return enabled != null && enabled.contains(getPackageName());
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public void openNotificationSettings() {
+        try {
+            Intent i = new Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS");
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(i);
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void readNotifications() {
+        if (!hasNotificationAccess()) {
+            openNotificationSettings();
+            answerAndSpeak("Дайте JARVIS доступ к уведомлениям, сэр.");
+            return;
+        }
+        String latest = NotificationReader.latest();
+        if (latest.length() == 0) {
+            answerAndSpeak("Уведомлений пока нет, сэр.");
+        } else {
+            answerAndSpeak("Последние уведомления. " + latest);
+        }
+    }
+
+    private void controlMedia(String action) {
+        if (!hasNotificationAccess()) {
+            openNotificationSettings();
+            answerAndSpeak("Для управления музыкой нужен доступ к уведомлениям, сэр.");
+            return;
+        }
+        try {
+            MediaSessionManager manager =
+                    (MediaSessionManager) getSystemService(Context.MEDIA_SESSION_SERVICE);
+            if (manager == null) throw new Exception("no media session manager");
+            List<MediaController> sessions =
+                    manager.getActiveSessions(new ComponentName(this, NotificationReader.class));
+            if (sessions == null || sessions.size() == 0) {
+                answerAndSpeak("Активной музыки не вижу, сэр.");
+                return;
+            }
+            MediaController.TransportControls controls = sessions.get(0).getTransportControls();
+            if ("play".equals(action)) controls.play();
+            else if ("pause".equals(action)) controls.pause();
+            else if ("next".equals(action)) controls.skipToNext();
+            else if ("prev".equals(action)) controls.skipToPrevious();
+            else if ("stop".equals(action)) controls.stop();
+            answerAndSpeak("Готово, сэр.");
+        } catch (Exception e) {
+            answerAndSpeak("Не смог управлять музыкой, сэр.");
+        }
+    }
+
+    private void toggleTorch(boolean on) {
+        if (Build.VERSION.SDK_INT < 23 || !hasPermission(Manifest.permission.CAMERA)) {
+            answerAndSpeak("Нужно разрешение на камеру для фонарика, сэр.");
+            return;
+        }
+        try {
+            CameraManager cm = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
+            if (cm == null) throw new Exception("no camera manager");
+            for (String id : cm.getCameraIdList()) {
+                Boolean flash = cm.getCameraCharacteristics(id)
+                        .get(CameraCharacteristics.FLASH_INFO_AVAILABLE);
+                if (Boolean.TRUE.equals(flash)) {
+                    cm.setTorchMode(id, on);
+                    answerAndSpeak(on ? "Фонарик включён, сэр." : "Фонарик выключен, сэр.");
+                    return;
+                }
+            }
+            answerAndSpeak("Фонарик не найден, сэр.");
+        } catch (Exception e) {
+            answerAndSpeak("Не смог переключить фонарик, сэр.");
+        }
+    }
+
+    private void scheduleReminder(int amount, String unit, String text) {
+        try {
+            long millis;
+            if (unit.startsWith("сек")) millis = amount * 1000L;
+            else if (unit.startsWith("час")) millis = amount * 3600000L;
+            else millis = amount * 60000L;
+            Intent intent = new Intent(this, JarvisReceiver.class);
+            intent.putExtra("message", text);
+            int requestCode = (int) (System.currentTimeMillis() % 100000);
+            int flags = PendingIntent.FLAG_UPDATE_CURRENT;
+            if (Build.VERSION.SDK_INT >= 31) flags |= 0x40000000; // FLAG_IMMUTABLE
+            PendingIntent pending = PendingIntent.getBroadcast(this, requestCode, intent, flags);
+            AlarmManager alarm = (AlarmManager) getSystemService(ALARM_SERVICE);
+            alarm.set(AlarmManager.ELAPSED_REALTIME_WAKEUP,
+                    SystemClock.elapsedRealtime() + millis, pending);
+            answerAndSpeak("Напомню через " + amount + " " + unit + ": " + text + ", сэр.");
+        } catch (Exception e) {
+            answerAndSpeak("Не смог установить напоминание, сэр.");
+        }
+    }
+
+    private void openWifiSettings() {
+        try {
+            Intent i = new Intent(Settings.ACTION_WIFI_SETTINGS);
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(i);
+            answerAndSpeak("Открываю настройки Wi-Fi, сэр.");
+        } catch (Exception e) {
+            answerAndSpeak("Не смог открыть настройки, сэр.");
         }
     }
 
