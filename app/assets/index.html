@@ -3,205 +3,213 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>J.A.R.V.I.S.</title>
+<title>J.A.R.V.I.S. // MK-II</title>
 <style>
-  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body {
-    margin: 0; padding: 0; width: 100%; height: 100%;
-    background: #04070b; color: #9fe9ff;
-    font-family: "Courier New", monospace;
-    overflow: hidden;
-  }
-  body::before {
-    content: ""; position: fixed; inset: 0;
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;background:#03060b;color:#bfe9ff;
+    font-family:"Segoe UI",Roboto,"Helvetica Neue",sans-serif;overflow:hidden}
+  body:before{content:"";position:fixed;inset:0;pointer-events:none;
     background:
-      radial-gradient(circle at 50% 42%, rgba(20,90,110,.28), transparent 58%),
-      repeating-linear-gradient(0deg, rgba(80,190,220,.045) 0 1px, transparent 1px 34px),
-      repeating-linear-gradient(90deg, rgba(80,190,220,.045) 0 1px, transparent 1px 34px);
-    pointer-events: none;
-  }
-  .wrap {
-    position: relative; height: 100%; padding: 18px 16px 14px;
-    display: flex; flex-direction: column;
-  }
-  header { text-align: center; letter-spacing: 3px; }
-  header .title {
-    font-size: 22px; font-weight: bold; color: #ffd88a;
-    text-shadow: 0 0 14px rgba(255,200,100,.55);
-  }
-  header .sub { font-size: 9px; color: #5e9fb0; margin-top: 3px; letter-spacing: 2px; }
-
-  .core {
-    flex: 0 0 auto; height: 250px; position: relative;
-    display: flex; align-items: center; justify-content: center;
-  }
-  .ring {
-    position: absolute; border-radius: 50%;
-    border: 1px solid rgba(120,225,255,.35);
-  }
-  .r1 { width: 220px; height: 220px; border-style: dashed; animation: spin 26s linear infinite; }
-  .r2 { width: 176px; height: 176px; border-color: rgba(255,208,120,.45); animation: spin 14s linear infinite reverse; }
-  .r3 { width: 132px; height: 132px; border-color: rgba(120,225,255,.18); }
-  .glow {
-    position: absolute; width: 96px; height: 96px; border-radius: 50%;
-    background: radial-gradient(circle, rgba(120,230,255,.35), transparent 70%);
-    animation: pulse 2.4s ease-in-out infinite;
-  }
-  .center {
-    position: relative; text-align: center; z-index: 2;
-    font-size: 13px; letter-spacing: 2px; color: #d8f7ff;
-    text-shadow: 0 0 10px rgba(120,225,255,.8);
-  }
-  .center small { display: block; font-size: 9px; color: #6fb6c8; margin-top: 6px; letter-spacing: 1px; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  @keyframes pulse { 50% { transform: scale(1.25); opacity: .35; } }
-
-  #status {
-    text-align: center; font-size: 12px; color: #ffd88a;
-    min-height: 18px; letter-spacing: 1px;
-    text-shadow: 0 0 8px rgba(255,200,100,.4);
-  }
-  #partial {
-    text-align: center; font-size: 11px; color: #6fb6c8;
-    min-height: 16px; margin-top: 4px;
-  }
-
-  .log {
-    flex: 1 1 auto; overflow-y: auto; margin: 12px 0;
-    padding: 10px; border: 1px solid rgba(120,225,255,.14);
-    background: rgba(8,22,30,.55); font-size: 12px; line-height: 1.5;
-  }
-  .line { margin-bottom: 8px; }
-  .who { color: #ffd88a; font-size: 10px; letter-spacing: 1px; }
-  .say { color: #d8f7ff; }
-  .ans { color: #9fe9ff; }
-  .err { color: #ff8f8f; }
-
-  .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  button, .toggle {
-    appearance: none; border: 1px solid rgba(255,208,120,.5);
-    background: rgba(255,208,120,.07); color: #ffd88a;
-    padding: 12px 6px; font-family: inherit; font-size: 12px;
-    letter-spacing: 1px; text-align: center; cursor: pointer;
-  }
-  button:active, .toggle:active { background: rgba(255,208,120,.22); }
-  .on { background: rgba(120,225,255,.18); border-color: #9fe9ff; color: #d8f7ff; }
-
-  .entry { display: flex; margin-top: 8px; }
-  .entry input {
-    flex: 1; min-width: 0; background: rgba(8,22,30,.8);
-    border: 1px solid rgba(120,225,255,.25); color: #d8f7ff;
-    padding: 11px; font-family: inherit; font-size: 12px; outline: none;
-  }
-  .entry button { margin-left: 6px; padding: 11px 14px; }
-
-  details { margin-top: 8px; font-size: 10px; color: #5e9fb0; }
-  details input {
-    width: 100%; margin-top: 6px; background: #07131a;
-    border: 1px solid rgba(120,225,255,.2); color: #9fe9ff;
-    padding: 7px; font-family: inherit; font-size: 10px;
-  }
-  details button { margin-top: 6px; padding: 7px; font-size: 10px; }
+      radial-gradient(circle at 50% 32%,rgba(0,150,200,.20),transparent 55%),
+      radial-gradient(circle at 50% 32%,rgba(255,190,90,.07),transparent 35%),
+      linear-gradient(rgba(90,190,220,.035) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(90,190,220,.035) 1px,transparent 1px);
+    background-size:auto,auto,34px 34px,34px 34px}
+  .wrap{position:relative;height:100%;display:flex;flex-direction:column;
+    padding:14px 14px 12px;gap:10px}
+  header{display:flex;align-items:center;justify-content:space-between}
+  .brand{font-size:17px;font-weight:700;letter-spacing:5px;color:#ffd79a;
+    text-shadow:0 0 16px rgba(255,190,90,.45)}
+  .brand small{display:block;font-size:8px;letter-spacing:3px;color:#4f93a8;margin-top:2px}
+  .pill{font-size:9px;letter-spacing:1px;padding:6px 9px;border-radius:20px;
+    border:1px solid rgba(90,220,255,.35);color:#8fe6ff;background:rgba(10,40,55,.45)}
+  .pill.live{border-color:rgba(255,200,110,.5);color:#ffd79a}
+  .hud{height:210px;position:relative;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .hud svg{position:absolute;width:210px;height:210px;overflow:visible}
+  .ring{fill:none;stroke:rgba(120,225,255,.16);stroke-width:1}
+  .arc{fill:none;stroke:#7ee8ff;stroke-width:2;stroke-linecap:round;
+    filter:drop-shadow(0 0 6px rgba(120,225,255,.8));
+    stroke-dasharray:60 420;animation:spin 8s linear infinite;transform-origin:50% 50%}
+  .arc.gold{stroke:#ffd79a;stroke-dasharray:30 450;animation-duration:12s;animation-direction:reverse;
+    filter:drop-shadow(0 0 6px rgba(255,200,110,.7))}
+  .core{position:relative;width:112px;height:112px;border-radius:50%;
+    background:radial-gradient(circle,rgba(125,235,255,.28),rgba(5,15,25,.9) 68%);
+    box-shadow:0 0 34px rgba(90,210,255,.25),inset 0 0 22px rgba(90,210,255,.18);
+    display:flex;align-items:center;justify-content:center;flex-direction:column;
+    animation:breathe 3s ease-in-out infinite}
+  .core b{font-size:19px;letter-spacing:4px;color:#e8fbff;text-shadow:0 0 14px #7ee8ff}
+  .core span{font-size:8px;letter-spacing:2px;color:#6fb6c8;margin-top:4px}
+  .wave{position:absolute;bottom:2px;height:26px;display:flex;gap:3px;align-items:flex-end}
+  .wave i{width:3px;background:linear-gradient(#ffd79a,#6fe6ff);border-radius:2px;
+    animation:eq .9s ease-in-out infinite alternate;opacity:.75}
+  .wave i:nth-child(2n){animation-delay:.15s}.wave i:nth-child(3n){animation-delay:.3s}
+  .wave i:nth-child(5n){animation-delay:.45s}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes breathe{50%{transform:scale(1.06);box-shadow:0 0 48px rgba(90,210,255,.4)}}
+  @keyframes eq{from{height:4px}to{height:24px}}
+  .readout{text-align:center;min-height:42px}
+  #status{font-size:12px;letter-spacing:1px;color:#ffd79a}
+  #partial{font-size:10px;color:#6fb6c8;margin-top:4px;min-height:13px}
+  #stream{font-size:11px;color:#d8f7ff;margin-top:3px;min-height:14px}
+  .log{flex:1 1 auto;overflow-y:auto;padding:10px;border-radius:14px;
+    border:1px solid rgba(120,225,255,.13);background:rgba(7,20,30,.55);
+    backdrop-filter:blur(6px);font-size:12px;line-height:1.45}
+  .line{margin-bottom:9px;padding:8px 10px;border-radius:10px;background:rgba(120,225,255,.045)}
+  .line.you{background:rgba(255,200,110,.06)}
+  .who{font-size:9px;letter-spacing:1.5px;color:#ffd79a;margin-bottom:2px}
+  .say{color:#e8fbff}.ans{color:#bfe9ff}.err{color:#ff9a9a}
+  .controls{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;flex:0 0 auto}
+  button{appearance:none;border:1px solid rgba(126,232,255,.28);border-radius:12px;
+    background:linear-gradient(180deg,rgba(20,55,70,.75),rgba(8,25,36,.85));
+    color:#bfe9ff;padding:11px 4px;font:inherit;font-size:10px;letter-spacing:.7px;
+    cursor:pointer;transition:.15s}
+  button:active{transform:scale(.97);border-color:#ffd79a;color:#ffd79a}
+  button.on{background:linear-gradient(180deg,rgba(255,200,110,.25),rgba(60,40,10,.4));
+    border-color:#ffd79a;color:#ffe6bb}
+  .chips{display:flex;gap:6px;overflow-x:auto;flex:0 0 auto;padding-bottom:2px}
+  .chips button{flex:0 0 auto;padding:7px 10px;font-size:9px;border-radius:16px}
+  .entry{display:flex;gap:7px;flex:0 0 auto}
+  .entry input{flex:1;min-width:0;border-radius:12px;border:1px solid rgba(126,232,255,.22);
+    background:rgba(5,18,27,.85);color:#e8fbff;padding:11px 12px;font:inherit;font-size:12px;outline:none}
+  details{flex:0 0 auto;border-top:1px solid rgba(120,225,255,.12);padding-top:8px;
+    font-size:10px;color:#6fb6c8}
+  summary{cursor:pointer;letter-spacing:1px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
+  details input,details select{width:100%;background:#07131c;border:1px solid rgba(120,225,255,.2);
+    color:#bfe9ff;padding:7px;border-radius:8px;font:inherit;font-size:10px}
+  details button{padding:8px;border-radius:8px}
+  .hint{font-size:9px;color:#4f7f90;margin-top:6px;line-height:1.4}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
-    <div class="title">J.A.R.V.I.S.</div>
-    <div class="sub">LOCAL SYSTEM // ONLINE</div>
+    <div class="brand">J.A.R.V.I.S.<small>LOCAL INTELLIGENCE // MK-II</small></div>
+    <div class="pill live" id="mode">ФРАЗА</div>
   </header>
 
-  <div class="core">
-    <div class="ring r1"></div>
-    <div class="ring r2"></div>
-    <div class="ring r3"></div>
-    <div class="glow"></div>
-    <div class="center">JARVIS<small id="mode">РЕЖИМ: ФРАЗА</small></div>
+  <div class="hud">
+    <svg viewBox="0 0 210 210">
+      <circle class="ring" cx="105" cy="105" r="98"/>
+      <circle class="ring" cx="105" cy="105" r="82" stroke-dasharray="4 8"/>
+      <circle class="ring" cx="105" cy="105" r="66"/>
+      <circle class="arc" cx="105" cy="105" r="98"/>
+      <circle class="arc gold" cx="105" cy="105" r="82"/>
+    </svg>
+    <div class="core"><b>JARVIS</b><span>ONLINE</span></div>
+    <div class="wave" id="wave"></div>
   </div>
 
-  <div id="status">Инициализация...</div>
-  <div id="partial"></div>
+  <div class="readout">
+    <div id="status">Инициализация...</div>
+    <div id="partial"></div>
+    <div id="stream"></div>
+  </div>
 
   <div class="log" id="log">
-    <div class="line"><div class="who">JARVIS</div><div class="ans">К вашим услугам, сэр. Скажите «Джарвис» и задайте вопрос.</div></div>
+    <div class="line"><div class="who">JARVIS</div><div class="ans">Системы активны. Скажите «Джарвис» и задайте задачу, сэр.</div></div>
+  </div>
+
+  <div class="chips">
+    <button onclick="quick('Прочитай смс')">SMS</button>
+    <button onclick="quick('Который час')">ВРЕМЯ</button>
+    <button onclick="quick('Проверь батарею')">БАТАРЕЯ</button>
+    <button onclick="quick('Открой камеру')">КАМЕРА</button>
+    <button onclick="quick('Стоп')">СТОП</button>
   </div>
 
   <div class="controls">
     <button id="btnListen" onclick="JarvisBridge.listen()">СЛУШАТЬ</button>
-    <button id="btnStop" onclick="JarvisBridge.stop()">СТОП</button>
-    <button id="btnCont" class="toggle" onclick="toggleContinuous()">НЕПРЕРЫВНЫЙ</button>
-    <button id="btnTest" onclick="JarvisBridge.test()">ПРОВЕРКА СВЯЗИ</button>
+    <button onclick="JarvisBridge.stop()">СТОП</button>
+    <button id="btnCont" onclick="toggleContinuous()">НЕПРЕРЫВНЫЙ</button>
+    <button onclick="JarvisBridge.test()">ТЕСТ ЯДРА</button>
+    <button onclick="openVoice()">ГОЛОС</button>
+    <button onclick="openSettings()">ЯДРО</button>
   </div>
 
   <div class="entry">
-    <input id="text" placeholder="Введите команду..." onkeydown="if(event.keyCode===13)sendText()">
+    <input id="text" placeholder="Команда или сообщение..." onkeydown="if(event.keyCode===13)sendText()">
     <button onclick="sendText()">ОТПРАВИТЬ</button>
   </div>
 
-  <details>
-    <summary>НАСТРОЙКИ ЯДРА</summary>
-    <input id="endpoint" placeholder="http://192.168.0.234:8001/v1/chat/completions">
-    <button onclick="saveEndpoint()">СОХРАНИТЬ</button>
+  <details id="settings">
+    <summary>НАСТРОЙКИ ЯДРА И ГОЛОСА</summary>
+    <div class="grid2">
+      <input id="endpoint" placeholder="http://192.168.0.234:8001/v1/chat/completions">
+      <button onclick="saveEndpoint()">СОХРАНИТЬ АДРЕС</button>
+      <select id="provider" onchange="saveProvider()">
+        <option value="system">Системный голос</option>
+        <option value="yandex">Yandex SpeechKit</option>
+      </select>
+      <select id="engine" onchange="saveEngine()"></select>
+      <select id="voice" onchange="saveVoice()"></select>
+      <input id="yandexKey" placeholder="Yandex API key (необязательно)">
+      <button onclick="saveKey()">СОХРАНИТЬ КЛЮЧ</button>
+    </div>
+    <div class="hint">Голос: выберите движок и голос, установленные на телефоне (Google, Yandex TTS и др.). Для облачного Yandex введите API-ключ. Команды: «прочитай смс», «ответь ...», «открой камеру», «ответь на звонок», «отбей звонок», «стоп».</div>
   </details>
 </div>
 
 <script>
-function esc(s) {
-  return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+(function(){
+  var wave=document.getElementById('wave');
+  for(var i=0;i<22;i++){var b=document.createElement('i');b.style.height=(4+Math.random()*16)+'px';b.style.animationDelay=(Math.random()*.5)+'s';wave.appendChild(b);}
+})();
+function esc(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function addLog(who,text,cls){
+  var log=document.getElementById('log'),d=document.createElement('div');
+  d.className='line '+(cls==='say'?'you':'');
+  d.innerHTML='<div class="who">'+esc(who)+'</div><div class="'+cls+'">'+esc(text)+'</div>';
+  log.appendChild(d);log.scrollTop=log.scrollHeight;
 }
-function addLog(who, text, cls) {
-  var log = document.getElementById('log');
-  var d = document.createElement('div');
-  d.className = 'line';
-  d.innerHTML = '<div class="who">' + who + '</div><div class="' + cls + '">' + esc(text) + '</div>';
-  log.appendChild(d);
-  log.scrollTop = log.scrollHeight;
+function fillSelect(id,items,labelFn,valueFn,current){
+  var s=document.getElementById(id);s.innerHTML='';
+  items.forEach(function(x){
+    var o=document.createElement('option');o.value=valueFn(x);o.textContent=labelFn(x);
+    if(o.value===current)o.selected=true;s.appendChild(o);
+  });
 }
-window.JarvisUI = {
-  status: function(s) { document.getElementById('status').textContent = s; },
-  partial: function(s) { document.getElementById('partial').textContent = s; },
-  stream: function(s) {
-    document.getElementById('partial').textContent = s;
-    document.querySelector('.glow').style.opacity = '1';
-  },
-  heard: function(s) {
-    document.getElementById('partial').textContent = '';
-    addLog('ВЫ', s, 'say');
-  },
-  answer: function(s) {
-    document.getElementById('partial').textContent = '';
-    addLog('JARVIS', s, 'ans');
-  },
-  error: function(s) { addLog('СИСТЕМА', s, 'err'); }
+function loadVoices(){
+  try{
+    var engines=JSON.parse(JarvisBridge.getEngines()||'[]');
+    fillSelect('engine',engines,function(e){return e.label||e.name},function(e){return e.name},'');
+    var voices=JSON.parse(JarvisBridge.getVoices()||'[]');
+    voices=voices.filter(function(v){return /ru/i.test(v.locale||'')});
+    fillSelect('voice',voices,function(v){return v.name},function(v){return v.name},JarvisBridge.getVoice());
+  }catch(e){}
+}
+window.JarvisUI={
+  status:function(s){document.getElementById('status').textContent=s;},
+  partial:function(s){document.getElementById('partial').textContent=s;},
+  stream:function(s){document.getElementById('stream').textContent=s;},
+  heard:function(s){document.getElementById('partial').textContent='';addLog('ВЫ',s,'say');},
+  answer:function(s){document.getElementById('stream').textContent='';addLog('JARVIS',s,'ans');},
+  error:function(s){addLog('СИСТЕМА',s,'err');}
 };
-function sendText() {
-  var i = document.getElementById('text');
-  var v = i.value.trim();
-  if (!v) return;
-  i.value = '';
-  addLog('ВЫ', v, 'say');
-  JarvisBridge.ask(v);
-}
-function toggleContinuous() {
-  var b = document.getElementById('btnCont');
-  var current = b.className.indexOf('on') >= 0;
+function quick(t){addLog('ВЫ',t,'say');JarvisBridge.ask(t);}
+function sendText(){var i=document.getElementById('text'),v=i.value.trim();if(!v)return;i.value='';addLog('ВЫ',v,'say');JarvisBridge.ask(v);}
+function toggleContinuous(){
+  var b=document.getElementById('btnCont'),current=b.className.indexOf('on')>=0;
   JarvisBridge.setContinuous(!current);
-  b.className = !current ? 'toggle on' : 'toggle';
-  document.getElementById('mode').textContent = !current ? 'РЕЖИМ: ПОСТОЯННЫЙ' : 'РЕЖИМ: ФРАЗА';
+  b.className=!current?'on':'';
+  document.getElementById('mode').textContent=!current?'НЕПРЕРЫВНЫЙ':'ФРАЗА';
 }
-function saveEndpoint() {
-  JarvisBridge.setEndpoint(document.getElementById('endpoint').value);
-  JarvisUI.status('Адрес ядра обновлён');
-}
-setTimeout(function() {
-  try {
-    document.getElementById('endpoint').value = JarvisBridge.getEndpoint();
-    if (JarvisBridge.isContinuous()) {
-      document.getElementById('btnCont').className = 'toggle on';
-      document.getElementById('mode').textContent = 'РЕЖИМ: ПОСТОЯННЫЙ';
-    }
-  } catch (e) {}
-}, 400);
+function openVoice(){document.getElementById('settings').open=true;loadVoices();document.getElementById('voice').focus();}
+function openSettings(){document.getElementById('settings').open=true;}
+function saveEndpoint(){JarvisBridge.setEndpoint(document.getElementById('endpoint').value);JarvisUI.status('Адрес ядра обновлён');}
+function saveProvider(){JarvisBridge.setTtsProvider(document.getElementById('provider').value);}
+function saveEngine(){JarvisBridge.setEngine(document.getElementById('engine').value);setTimeout(loadVoices,1200);}
+function saveVoice(){JarvisBridge.setVoice(document.getElementById('voice').value);}
+function saveKey(){JarvisBridge.setYandexKey(document.getElementById('yandexKey').value);}
+setTimeout(function(){
+  try{
+    document.getElementById('endpoint').value=JarvisBridge.getEndpoint();
+    document.getElementById('provider').value=JarvisBridge.getTtsProvider()||'system';
+    document.getElementById('yandexKey').value=JarvisBridge.getYandexKey()||'';
+    if(JarvisBridge.isContinuous()){document.getElementById('btnCont').className='on';document.getElementById('mode').textContent='НЕПРЕРЫВНЫЙ';}
+    loadVoices();
+  }catch(e){}
+},500);
 </script>
 </body>
 </html>

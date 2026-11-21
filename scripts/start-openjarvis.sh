@@ -4,8 +4,8 @@
 set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
 REPO="$HERE/OpenJarvis"
-BLOB=/root/.ollama/models/blobs/sha256-c5396e06af294bd101b30dce59131a76d2b773e76950acc870eda801d3ab0515
-MODEL=qwen2.5:0.5b
+BLOB=/root/.ollama/models/blobs/sha256-7f4030143c1c477224c5434f8272c662a8b042079a0a584f0a27a1684fe2e1fa
+MODEL=qwen3:0.6b
 MODEL_PORT=8081
 
 wait_for() {

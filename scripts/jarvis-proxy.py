@@ -1,22 +1,88 @@
 #!/usr/bin/env python3
-"""Tiny bridge: Android app -> fast local llama-server (OpenJarvis model backend).
+"""Bridge: Android JARVIS -> fast local llama-server + optional Yandex TTS.
 
-The OpenJarvis API stays on container loopback (so the bundled GUI keeps
-working), while this proxy listens on the device Wi-Fi address and forwards
-requests to the low-latency model server. Streaming SSE replies are passed
-through line by line so the UI can render tokens as they arrive.
+- /v1/...            -> 127.0.0.1:8081 (llama.cpp, streaming SSE passthrough)
+- /tts?text=...      -> Yandex SpeechKit v3 (API key from request or env)
+- /health            -> local health check
 """
+import base64
 import http.server
+import json
+import os
 import socketserver
-import urllib.request
 import urllib.error
+import urllib.parse
+import urllib.request
 
 UPSTREAM = "http://127.0.0.1:8081"
+TTS_URL = "https://tts.api.cloud.yandex.net/tts/v3/utteranceSynthesis"
 PORT = 8001
+
+
+def _send(self, code, data, ctype="application/json"):
+    self.send_response(code)
+    self.send_header("Content-Type", ctype)
+    self.send_header("Content-Length", str(len(data)))
+    self.end_headers()
+    self.wfile.write(data)
 
 
 class Handler(http.server.BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
+
+    def _tts(self):
+        query = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+        text = query.get("text", [""])[0]
+        voice = query.get("voice", ["marina"])[0]
+        role = query.get("role", ["neutral"])[0]
+        key = query.get("key", [os.environ.get("YANDEX_TTS_KEY", "")])[0]
+        folder = query.get("folder", [os.environ.get("YANDEX_FOLDER_ID", "")])[0]
+
+        if not text:
+            _send(self, 400, b'{"error":"empty text"}')
+            return
+        if not key:
+            _send(self, 400, '{"error":"Yandex API key not set"}'.encode())
+            return
+
+        payload = {
+            "text": text,
+            "outputAudioSpec": {"containerAudio": {"containerAudioType": "WAV"}},
+            "hints": [{"voice": voice}, {"role": role}, {"speed": "1.0"}],
+        }
+        headers = {
+            "Authorization": "Api-Key " + key,
+            "Content-Type": "application/json",
+        }
+        if folder:
+            headers["x-folder-id"] = folder
+        req = urllib.request.Request(
+            TTS_URL, data=json.dumps(payload).encode("utf-8"),
+            headers=headers, method="POST",
+        )
+        try:
+            audio = bytearray()
+            with urllib.request.urlopen(req, timeout=40) as resp:
+                for line in resp:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        obj = json.loads(line)
+                        obj = obj.get("result", obj)
+                        chunk = obj.get("audioChunk", {}).get("data")
+                        if chunk:
+                            audio.extend(base64.b64decode(chunk))
+                    except Exception:
+                        continue
+            if not audio:
+                _send(self, 502, b'{"error":"empty audio from Yandex"}')
+                return
+            _send(self, 200, bytes(audio), "audio/wav")
+        except urllib.error.HTTPError as exc:
+            _send(self, exc.code, exc.read())
+        except Exception as exc:
+            _send(self, 502, ('{"error":"%s"}' % str(exc)).encode())
 
     def _forward(self):
         length = int(self.headers.get("Content-Length", "0") or 0)
@@ -43,27 +109,20 @@ class Handler(http.server.BaseHTTPRequestHandler):
                         self.wfile.flush()
                 else:
                     data = resp.read()
-                    self.send_response(resp.status)
-                    self.send_header("Content-Type", ctype)
-                    self.send_header("Content-Length", str(len(data)))
-                    self.end_headers()
-                    self.wfile.write(data)
+                    _send(self, resp.status, data, ctype)
         except urllib.error.HTTPError as exc:
-            data = exc.read()
-            self.send_response(exc.code)
-            self.send_header("Content-Type", "application/json")
-            self.send_header("Content-Length", str(len(data)))
-            self.end_headers()
-            self.wfile.write(data)
+            _send(self, exc.code, exc.read())
         except Exception as exc:
-            data = ('{"error":"%s"}' % str(exc)).encode()
-            self.send_response(502)
-            self.send_header("Content-Type", "application/json")
-            self.send_header("Content-Length", str(len(data)))
-            self.end_headers()
-            self.wfile.write(data)
+            _send(self, 502, ('{"error":"%s"}' % str(exc)).encode())
 
-    do_GET = _forward
+    def do_GET(self):
+        if self.path.startswith("/health"):
+            _send(self, 200, b'{"status":"ok"}')
+        elif self.path.startswith("/tts?"):
+            self._tts()
+        else:
+            self._forward()
+
     do_POST = _forward
 
     def log_message(self, fmt, *args):
@@ -76,5 +135,6 @@ class Server(socketserver.ThreadingTCPServer):
 
 
 if __name__ == "__main__":
-    print("Jarvis bridge listening on 0.0.0.0:%d -> %s" % (PORT, UPSTREAM), flush=True)
+    print("Jarvis bridge on 0.0.0.0:%d -> %s (+Yandex TTS)" % (PORT, UPSTREAM),
+          flush=True)
     Server(("0.0.0.0", PORT), Handler).serve_forever()

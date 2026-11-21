@@ -15,7 +15,12 @@ import android.webkit.WebView;
 
 import org.json.JSONObject;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class MainActivity extends Activity implements JarvisService.JarvisCallback {
+
+    private static final int PERMISSION_REQUEST = 7;
 
     private WebView web;
     private JarvisService service;
@@ -53,23 +58,43 @@ public class MainActivity extends Activity implements JarvisService.JarvisCallba
         settings.setLoadWithOverviewMode(true);
         settings.setUseWideViewPort(true);
         web.addJavascriptInterface(new Bridge(), "JarvisBridge");
-        web.setBackgroundColor(0xFF05080C);
+        web.setBackgroundColor(0xFF04070B);
         setContentView(web);
         web.loadUrl("file:///android_asset/index.html");
 
-        if (Build.VERSION.SDK_INT >= 23
-                && checkSelfPermission(Manifest.permission.RECORD_AUDIO)
-                != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, 7);
-        }
-
+        requestAllPermissions();
         startService(new Intent(this, JarvisService.class));
     }
 
-    private boolean hasMicPermission() {
-        if (Build.VERSION.SDK_INT < 23) {
-            return true;
+    private String[] neededPermissions() {
+        List<String> list = new ArrayList<String>();
+        list.add(Manifest.permission.RECORD_AUDIO);
+        list.add(Manifest.permission.READ_SMS);
+        list.add(Manifest.permission.SEND_SMS);
+        list.add(Manifest.permission.CALL_PHONE);
+        list.add(Manifest.permission.READ_PHONE_STATE);
+        list.add(Manifest.permission.READ_CALL_LOG);
+        if (Build.VERSION.SDK_INT >= 26) {
+            list.add("android.permission.ANSWER_PHONE_CALLS");
         }
+        return list.toArray(new String[0]);
+    }
+
+    private void requestAllPermissions() {
+        if (Build.VERSION.SDK_INT < 23) return;
+        List<String> missing = new ArrayList<String>();
+        for (String p : neededPermissions()) {
+            if (checkSelfPermission(p) != PackageManager.PERMISSION_GRANTED) {
+                missing.add(p);
+            }
+        }
+        if (missing.size() > 0) {
+            requestPermissions(missing.toArray(new String[0]), PERMISSION_REQUEST);
+        }
+    }
+
+    private boolean hasMicPermission() {
+        if (Build.VERSION.SDK_INT < 23) return true;
         return checkSelfPermission(Manifest.permission.RECORD_AUDIO)
                 == PackageManager.PERMISSION_GRANTED;
     }
@@ -78,8 +103,7 @@ public class MainActivity extends Activity implements JarvisService.JarvisCallba
     public void onRequestPermissionsResult(int requestCode, String[] permissions,
                                            int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == 7 && grantResults.length > 0
-                && grantResults[0] == PackageManager.PERMISSION_GRANTED
+        if (requestCode == PERMISSION_REQUEST && hasMicPermission()
                 && service != null && !autoStarted) {
             service.listen();
             autoStarted = true;
@@ -146,30 +170,22 @@ public class MainActivity extends Activity implements JarvisService.JarvisCallba
     public class Bridge {
         @JavascriptInterface
         public void listen() {
-            if (service != null) {
-                service.listen();
-            }
+            if (service != null) service.listen();
         }
 
         @JavascriptInterface
         public void stop() {
-            if (service != null) {
-                service.stopListening();
-            }
+            if (service != null) service.stopListening();
         }
 
         @JavascriptInterface
         public void ask(String text) {
-            if (service != null) {
-                service.ask(text);
-            }
+            if (service != null) service.ask(text);
         }
 
         @JavascriptInterface
         public void setContinuous(boolean on) {
-            if (service != null) {
-                service.setContinuous(on);
-            }
+            if (service != null) service.setContinuous(on);
         }
 
         @JavascriptInterface
@@ -179,9 +195,7 @@ public class MainActivity extends Activity implements JarvisService.JarvisCallba
 
         @JavascriptInterface
         public void setEndpoint(String url) {
-            if (service != null) {
-                service.setEndpoint(url);
-            }
+            if (service != null) service.setEndpoint(url);
         }
 
         @JavascriptInterface
@@ -190,10 +204,53 @@ public class MainActivity extends Activity implements JarvisService.JarvisCallba
         }
 
         @JavascriptInterface
+        public String getEngines() {
+            return service != null ? service.getEnginesJson() : "[]";
+        }
+
+        @JavascriptInterface
+        public String getVoices() {
+            return service != null ? service.getVoicesJson() : "[]";
+        }
+
+        @JavascriptInterface
+        public void setEngine(String engine) {
+            if (service != null) service.setEngine(engine);
+        }
+
+        @JavascriptInterface
+        public void setVoice(String voice) {
+            if (service != null) service.setVoice(voice);
+        }
+
+        @JavascriptInterface
+        public String getVoice() {
+            return service != null ? service.getVoice() : "";
+        }
+
+        @JavascriptInterface
+        public void setTtsProvider(String provider) {
+            if (service != null) service.setTtsProvider(provider);
+        }
+
+        @JavascriptInterface
+        public String getTtsProvider() {
+            return service != null ? service.getTtsProvider() : "system";
+        }
+
+        @JavascriptInterface
+        public void setYandexKey(String key) {
+            if (service != null) service.setYandexKey(key);
+        }
+
+        @JavascriptInterface
+        public String getYandexKey() {
+            return service != null ? service.getYandexKey() : "";
+        }
+
+        @JavascriptInterface
         public void test() {
-            if (service != null) {
-                service.ask("Проверь связь и скажи, что ты на связи");
-            }
+            if (service != null) service.ask("Проверь связь и скажи, что ты на связи");
         }
     }
 }
