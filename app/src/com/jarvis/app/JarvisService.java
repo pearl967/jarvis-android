@@ -48,9 +48,8 @@ public class JarvisService extends Service
     }
 
     private static final String PERSONA =
-            "Ты Джарвис. Отвечай ТОЛЬКО на русском языке, 1–2 коротких предложения. " +
-            "Вежливо, суховато, как британский дворецкий. Называй пользователя «сэр». " +
-            "Без markdown, без эмодзи. Не выдумывай факты.";
+            "Ты Джарвис. Отвечай только на русском, 1–2 коротких предложения. " +
+            "Называй пользователя «сэр». Без markdown.";
 
     private final IBinder binder = new LocalBinder();
     private final Handler main = new Handler(Looper.getMainLooper());
@@ -338,9 +337,14 @@ public class JarvisService extends Service
             if (code < 200 || code >= 300) {
                 return "Ошибка связи с ядром: " + code;
             }
-            return answer.length() > 0
-                    ? answer.toString().trim()
-                    : "Не получил ответа от ядра, сэр.";
+            if (answer.length() == 0) {
+                return "Не получил ответа от ядра, сэр.";
+            }
+            String text = answer.toString().trim();
+            if (!text.toLowerCase(new Locale("ru")).contains("сэр")) {
+                text = "Сэр, " + text;
+            }
+            return text;
         } catch (Exception e) {
             return "Не могу связаться с ядром. Проверьте адрес сервера. " + e.getMessage();
         } finally {
