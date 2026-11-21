@@ -94,6 +94,7 @@ public class JarvisService extends Service
     private boolean continuous = false;
     private boolean listening = false;
     private boolean autoListen = true;
+    private Runnable pendingRestart;
     private volatile int answerGeneration = 0;
     private volatile int speechGeneration = 0;
     private JarvisCallback callback;
@@ -178,6 +179,21 @@ public class JarvisService extends Service
         }
         if (preferredVoice.length() > 0) {
             applyVoice(preferredVoice);
+        } else {
+            try {
+                Set<Voice> voices = tts.getVoices();
+                if (voices != null) {
+                    for (Voice v : voices) {
+                        if (v.getLocale() != null
+                                && "ru".equalsIgnoreCase(v.getLocale().getLanguage())) {
+                            tts.setVoice(v);
+                            preferredVoice = v.getName();
+                            break;
+                        }
+                    }
+                }
+            } catch (Exception ignored) {
+            }
         }
         tts.setSpeechRate(1.0f);
         tts.setPitch(0.95f);
@@ -408,6 +424,7 @@ public class JarvisService extends Service
     public void setContinuous(boolean on) {
         continuous = on;
         status(on ? "Непрерывный режим включён" : "Режим по фразе «Джарвис»");
+        if (on && !listening && hasPermission(Manifest.permission.RECORD_AUDIO)) listen();
     }
 
     public boolean isContinuous() {
@@ -422,9 +439,36 @@ public class JarvisService extends Service
         return endpoint;
     }
 
+    public String getDiagnosticsJson() {
+        JSONObject o = new JSONObject();
+        try {
+            o.put("mic", hasPermission(Manifest.permission.RECORD_AUDIO));
+            o.put("sms", hasPermission(Manifest.permission.READ_SMS)
+                    && hasPermission(Manifest.permission.SEND_SMS));
+            o.put("calls", hasPermission(Manifest.permission.READ_PHONE_STATE)
+                    && hasPermission(Manifest.permission.CALL_PHONE));
+            o.put("camera", hasPermission(Manifest.permission.CAMERA));
+            o.put("location", hasPermission(Manifest.permission.ACCESS_COARSE_LOCATION));
+            o.put("notifications", hasNotificationAccess());
+            o.put("recognizer", recognizer != null
+                    && SpeechRecognizer.isRecognitionAvailable(this));
+            o.put("ttsReady", ttsReady);
+            o.put("ttsProvider", ttsProvider);
+            o.put("endpoint", endpoint);
+        } catch (Exception ignored) {
+        }
+        return o.toString();
+    }
+
     public void listen() {
         if (recognizer == null) {
             status("Распознавание речи недоступно");
+            return;
+        }
+        if (!hasPermission(Manifest.permission.RECORD_AUDIO)) {
+            autoListen = false;
+            status("Нет разрешения на микрофон — откройте JARVIS");
+            onError("Разрешите микрофон в настройках приложения");
             return;
         }
         if (listening) return;
@@ -435,7 +479,6 @@ public class JarvisService extends Service
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ru-RU");
         intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
         intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1);
-        intent.putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true);
         try {
             intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 150);
             intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 550);
@@ -453,6 +496,10 @@ public class JarvisService extends Service
 
     public void stopListening() {
         autoListen = false;
+        if (pendingRestart != null) {
+            main.removeCallbacks(pendingRestart);
+            pendingRestart = null;
+        }
         answerGeneration++;
         speechGeneration++;
         if (tts != null) {
@@ -468,12 +515,15 @@ public class JarvisService extends Service
 
     private void restartAfter(long delay) {
         listening = false;
-        main.postDelayed(new Runnable() {
+        if (pendingRestart != null) main.removeCallbacks(pendingRestart);
+        pendingRestart = new Runnable() {
             @Override
             public void run() {
+                pendingRestart = null;
                 if (autoListen) listen();
             }
-        }, delay);
+        };
+        main.postDelayed(pendingRestart, delay);
     }
 
     // ---------- Thinking ----------
@@ -631,6 +681,8 @@ public class JarvisService extends Service
     }
 
     private void answerAndSpeak(String text) {
+        answerGeneration++;
+        speechGeneration++;
         onAnswer(text);
         speak(text);
         restartAfter(700);
@@ -641,10 +693,8 @@ public class JarvisService extends Service
         String q = raw.toLowerCase(new Locale("ru")).trim();
 
         if (has(q, "стоп", "остановись", "хватит", "замолчи", "прекрати", "выключись")) {
-            answerAndSpeak("Останавливаюсь, сэр.");
-            main.postDelayed(new Runnable() {
-                @Override public void run() { stopListening(); }
-            }, 1400);
+            stopListening();
+            speak("Остановлено, сэр.");
             return true;
         }
         if (has(q, "который час", "сколько времени", "что за время")) {
@@ -1089,7 +1139,8 @@ public class JarvisService extends Service
             return;
         }
         if (wake) {
-            text = text.replaceAll("(?i)(джарвис|jarvis|чарвис|чарви)", "").trim();
+            text = text.replaceAll("(?i)(джарвис|jarvis|чарвис|чарви)", " ")
+                    .replaceAll("^[\\s,.:!?-]+", "").trim();
         }
         onHeard(original);
         if (text.length() == 0) {
@@ -1130,18 +1181,22 @@ public class JarvisService extends Service
 
     @Override
     public void onBeginningOfSpeech() {
+        boolean interrupted = false;
         if (tts != null) {
             try {
                 if (tts.isSpeaking()) {
                     tts.stop();
-                    status("Перебиваю себя, сэр");
-                    return;
+                    interrupted = true;
                 }
             } catch (Exception ignored) {
             }
         }
-        if (mediaPlayer != null) {
-            try { mediaPlayer.stop(); } catch (Exception ignored) { }
+        if (mediaPlayer != null) interrupted = true;
+        stopMedia();
+        if (interrupted) {
+            answerGeneration++;
+            speechGeneration++;
+            status("Перебиваю себя, сэр");
         }
         status("Говорите...");
     }
@@ -1171,14 +1226,18 @@ public class JarvisService extends Service
                 message = "Тишина — ожидаю";
                 break;
             case SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS:
-                message = "Нет разрешения на микрофон";
+                message = "Нет разрешения на микрофон — откройте JARVIS";
+                autoListen = false;
+                break;
+            case SpeechRecognizer.ERROR_RECOGNIZER_BUSY:
+                message = "Микрофон занят, повторяю";
                 break;
             default:
                 message = "Ошибка распознавания: " + error;
         }
         status(message);
         onError(message);
-        restartAfter(800);
+        if (autoListen) restartAfter(800);
     }
 
     @Override

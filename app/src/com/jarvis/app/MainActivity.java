@@ -259,6 +259,11 @@ public class MainActivity extends Activity implements JarvisService.JarvisCallba
         }
 
         @JavascriptInterface
+        public String diagnostics() {
+            return service != null ? service.getDiagnosticsJson() : "{}";
+        }
+
+        @JavascriptInterface
         public void test() {
             if (service != null) service.ask("Проверь связь и скажи, что ты на связи");
         }

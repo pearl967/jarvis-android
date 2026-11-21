@@ -128,6 +128,7 @@
     <button onclick="JarvisBridge.stop()">СТОП</button>
     <button id="btnCont" onclick="toggleContinuous()">НЕПРЕРЫВНЫЙ</button>
     <button onclick="JarvisBridge.test()">ТЕСТ ЯДРА</button>
+    <button onclick="showDiagnostics()">ДИАГНОСТИКА</button>
     <button onclick="openVoice()">ГОЛОС</button>
     <button onclick="openSettings()">ЯДРО</button>
   </div>
@@ -199,6 +200,17 @@ function toggleContinuous(){
   JarvisBridge.setContinuous(!current);
   b.className=!current?'on':'';
   document.getElementById('mode').textContent=!current?'НЕПРЕРЫВНЫЙ':'ФРАЗА';
+}
+function showDiagnostics(){
+  try{
+    var d=JSON.parse(JarvisBridge.diagnostics()||'{}');
+    var names={mic:'микрофон',sms:'SMS',calls:'звонки',camera:'камера',location:'геолокация',notifications:'уведомления',recognizer:'распознавание речи',ttsReady:'синтез речи'};
+    Object.keys(names).forEach(function(k){
+      addLog('ДИАГНОСТИКА',names[k]+': '+(d[k]?'OK':'НЕТ'),d[k]?'ans':'err');
+    });
+    addLog('ДИАГНОСТИКА','Голос: '+(d.ttsProvider||'system'),'ans');
+    addLog('ДИАГНОСТИКА','Адрес: '+(d.endpoint||'не задан'),'ans');
+  }catch(e){addLog('ДИАГНОСТИКА','Не удалось прочитать диагностику','err');}
 }
 function openVoice(){document.getElementById('settings').open=true;loadVoices();document.getElementById('voice').focus();}
 function openSettings(){document.getElementById('settings').open=true;}
